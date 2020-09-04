@@ -15,7 +15,7 @@
  */
 
 String appVersion()   { return "3.6.3.1" }
-String appModified()  { return "2020-07-19" }
+String appModified()  { return "2020-09-04" }
 String appAuthor()    { return "Anthony S." }
 Boolean isBeta()      { return false }
 Boolean isST()        { return (getPlatform() == "SmartThings") }
@@ -25,7 +25,7 @@ definition(
     name        : "Echo Speaks",
     namespace   : "tonesto7",
     author      : "Anthony Santilli",
-    description : "Integrate your Amazon Echo devices into your Smart Home environment to create virtual Echo Devices. This allows you to speak text, make announcements, control media playback including volume, and many other Alexa features.",
+    description : "Integrate your Amazon Echo devices into your Smart Home environment to create virtual Echo Devices. This allows you to speak text, make announcements, control media playback, set volume, and execute many other Alexa features.",
     category    : "My Apps",
     iconUrl     : "https://raw.githubusercontent.com/tonesto7/echo-speaks/master/resources/icons/echo_speaks_3.1x${state?.updateAvailable ? "_update" : ""}.png",
     iconX2Url   : "https://raw.githubusercontent.com/tonesto7/echo-speaks/master/resources/icons/echo_speaks_3.2x${state?.updateAvailable ? "_update" : ""}.png",

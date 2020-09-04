@@ -13,14 +13,14 @@
  *  for the specific language governing permissions and limitations under the License.
  */
 
-String devVersion()  { return "3.6.3.2" }
-String devModified() { return "2020-07-29" }
+String devVersion()  { return "3.7.0.0" }
+String devModified() { return "2020-09-04" }
 Boolean isBeta()     { return false }
 Boolean isST()       { return (getPlatform() == "SmartThings") }
 Boolean isWS()       { return false }
 
 metadata {
-    definition (name: "Echo Speaks Device", namespace: "tonesto7", author: "Anthony Santilli", mnmn: "SmartThings", vid: "generic-music-player") {
+    definition (name: "Echo Speaks Device", namespace: "aloneflower52999", author: "Anthony Santilli", mnmn: "SmartThingsCommunity", vid: "1f025301-d08e-3b63-811a-f97156d39f1d") {
         capability "Audio Mute" // Not Compatible with Hubitat
         capability "Audio Notification"
         capability "Audio Track Data" // To support SharpTools.io Album Art feature
@@ -31,41 +31,94 @@ metadata {
         capability "Refresh"
         capability "Sensor"
         capability "Speech Synthesis"
+        capability "aloneflower52999.echoSpeaksInfo"
+        capability "aloneflower52999.echoSpeaksMedia"
+        capability "aloneflower52999.echoSpeaksNotifications"
+        capability "aloneflower52999.echoSpeaksSettings"
+        capability "aloneflower52999.echoSpeaksSpeech1"
+        capability "aloneflower52999.echoSpeaksSpeech2"
 
-        attribute "alarmVolume", "number"
-        // attribute "alexaNotifications", "JSON_OBJECT"
+        // MEDIA ATTRIBUTES & COMMANDS
         attribute "alexaPlaylists", "JSON_OBJECT"
-        // attribute "alexaGuardStatus", "string"
-        attribute "alexaWakeWord", "string"
-        attribute "btDeviceConnected", "string"
-        attribute "btDevicesPaired", "JSON_OBJECT"
         attribute "currentAlbum", "string"
         attribute "currentStation", "string"
+        attribute "mediaSource", "string"
+        attribute "trackImage", "string"
+        attribute "trackImageHtml", "string"
+        attribute "volume", "number"
+
+        command "storeCurrentVolume"
+        command "restoreLastVolume"
+        command "togglePlayback"
+        command "volumeUp"
+        command "volumeDown"
+        command "searchMusic", ["string", "string", "number", "number"]
+        command "searchAmazonMusic", ["string", "number", "number"]
+        command "searchAppleMusic", ["string", "number", "number"]
+        command "searchPandora", ["string", "number", "number"]
+        command "searchIheart", ["string", "number", "number"]
+        command "searchSiriusXm", ["string", "number", "number"]
+        command "searchSpotify", ["string", "number", "number"]
+        // command "searchTidal", ["string", "number", "number"]    
+        command "searchTuneIn", ["string", "number", "number"]
+        command "stopAllDevices"
+
+        // NOTIFICATION ATTRIBUTES & COMMANDS
+        attribute "alarmVolume", "number"
+        // attribute "alexaNotifications", "JSON_OBJECT"
+
+        command "setAlarmVolume", ["number"]
+        command "sendAlexaAppNotification", ["string"]
+        command "createAlarm", ["string", "string", "string"]
+        command "createReminder", ["string", "string", "string"]
+        // command "createReminderNew", ["string", "string", "string", "string", "string"]
+        command "removeNotification", ["string"]
+        // command "removeAllNotificationsByType", ["string"]
+
+        // Device Info  ATTRIBUTES
         attribute "deviceFamily", "string"
         attribute "deviceSerial", "string"
         attribute "deviceStatus", "string"
         attribute "deviceStyle", "string"
         attribute "deviceType", "string"
-        attribute "doNotDisturb", "string"
         attribute "firmwareVer", "string"
-        attribute "followUpMode", "string"
+        attribute "onlineStatus", "string"
+        attribute "permissions", "string"
+        attribute "lastUpdated", "string"
+        attribute "supportedMusic", "string"
         attribute "lastCmdSentDt", "string"
+
+        command "getDeviceActivity"
+
+        // SETTINGs ATTRIBUTES
+        // attribute "alexaGuardStatus", "string"
+        attribute "alexaWakeWord", "string"
+        attribute "btDeviceConnected", "string"
+        attribute "btDevicesPaired", "JSON_OBJECT"
+        attribute "doNotDisturb", "string"
+        attribute "followUpMode", "string"
+        attribute "wakeWords", "enum"
+        attribute "wifiNetwork", "string"
+
+        command "doNotDisturbOn"
+        command "doNotDisturbOff"
+        // command "followUpModeOn"
+        // command "followUpModeOff"
+        command "setWakeWord", ["string"]
+        command "renameDevice", ["string"]
+        command "getBluetoothDevices"
+        command "connectBluetooth", ["string"]
+        command "disconnectBluetooth"
+        command "removeBluetooth", ["string"]
+        command "executeSequenceCommand", ["string"]
+        command "executeRoutineId", ["string"]
+
+        // SPEECH ATTRIBUTES & COMMANDS
+        attribute "wasLastSpokenToDevice", "string"
         attribute "lastSpeakCmd", "string"
         attribute "lastAnnouncement", "string"
         attribute "lastSpokenToTime", "number"
         attribute "lastVoiceActivity", "string"
-        attribute "lastUpdated", "string"
-        attribute "mediaSource", "string"
-        attribute "onlineStatus", "string"
-        attribute "permissions", "string"
-        attribute "supportedMusic", "string"
-        attribute "trackImage", "string"
-        attribute "trackImageHtml", "string"
-
-        attribute "volume", "number"
-        attribute "wakeWords", "enum"
-        attribute "wifiNetwork", "string"
-        attribute "wasLastSpokenToDevice", "string"
 
         command "playText", ["string"] //This command is deprecated in ST but will work
         command "playTextAndResume"
@@ -73,11 +126,6 @@ metadata {
         command "playTrackAndRestore"
         command "playTextAndRestore"
         command "replayText"
-        command "doNotDisturbOn"
-        command "doNotDisturbOff"
-        // command "followUpModeOn"
-        // command "followUpModeOff"
-        command "setAlarmVolume", ["number"]
         command "resetQueue"
         command "playWeather", ["number", "number"]
         command "playSingASong", ["number", "number"]
@@ -102,41 +150,12 @@ metadata {
         command "playCalendarToday", ["number", "number"]
         command "playCalendarTomorrow", ["number", "number"]
         command "playCalendarNext", ["number", "number"]
-        command "stopAllDevices"
-        command "searchMusic", ["string", "string", "number", "number"]
-        command "searchAmazonMusic", ["string", "number", "number"]
-        command "searchAppleMusic", ["string", "number", "number"]
-        command "searchPandora", ["string", "number", "number"]
-        command "searchIheart", ["string", "number", "number"]
-        command "searchSiriusXm", ["string", "number", "number"]
-        command "searchSpotify", ["string", "number", "number"]
-        // command "searchTidal", ["string", "number", "number"]
-        command "searchTuneIn", ["string", "number", "number"]
-        command "sendAlexaAppNotification", ["string"]
-        command "executeSequenceCommand", ["string"]
-        command "executeRoutineId", ["string"]
-        command "createAlarm", ["string", "string", "string"]
-        command "createReminder", ["string", "string", "string"]
-        // command "createReminderNew", ["string", "string", "string", "string", "string"]
-        command "removeNotification", ["string"]
-        // command "removeAllNotificationsByType", ["string"]
-        command "setWakeWord", ["string"]
-        command "renameDevice", ["string"]
-        command "storeCurrentVolume"
-        command "restoreLastVolume"
-        command "togglePlayback"
+
         command "setVolumeAndSpeak", ["number", "string"]
         command "setVolumeSpeakAndRestore", ["number", "string", "number"]
-        command "volumeUp"
-        command "volumeDown"
         command "speechTest"
         command "sendTestAnnouncement"
         command "sendTestAnnouncementAll"
-        command "getDeviceActivity"
-        command "getBluetoothDevices"
-        command "connectBluetooth", ["string"]
-        command "disconnectBluetooth"
-        command "removeBluetooth", ["string"]
         command "sendAnnouncementToDevices", ["string", "string", "string", "number", "number"]
     }
 
