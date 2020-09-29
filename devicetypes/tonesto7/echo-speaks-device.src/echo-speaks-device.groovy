@@ -14,23 +14,24 @@
  */
 
 String devVersion()  { return "3.7.0.0" }
-String devModified() { return "2020-09-04" }
+String devModified() { return "2020-09-14" }
 Boolean isBeta()     { return false }
 Boolean isST()       { return (getPlatform() == "SmartThings") }
 Boolean isWS()       { return false }
 
 metadata {
-    definition (name: "Echo Speaks Device", namespace: "aloneflower52999", author: "Anthony Santilli", mnmn: "SmartThingsCommunity", vid: "1f025301-d08e-3b63-811a-f97156d39f1d") {
+    definition (name: "Echo Speaks Device", namespace: "aloneflower52999", author: "Anthony Santilli", mnmn: "SmartThingsCommunity", vid: "0e7030f3-ecbe-361e-99ed-ed9faeb9ccc0") {
         capability "Audio Mute" // Not Compatible with Hubitat
         capability "Audio Notification"
         capability "Audio Track Data" // To support SharpTools.io Album Art feature
         capability "Audio Volume"
         // capability "Media Presets"
         capability "Music Player"
+        // capability "Media Playback"
         capability "Notification"
         capability "Refresh"
         capability "Sensor"
-        capability "Speech Synthesis"
+        // capability "Speech Synthesis"
         capability "aloneflower52999.echoSpeaksInfo"
         capability "aloneflower52999.echoSpeaksMedia"
         capability "aloneflower52999.echoSpeaksNotifications"
@@ -154,6 +155,9 @@ metadata {
         command "setVolumeAndSpeak", ["number", "string"]
         command "setVolumeSpeakAndRestore", ["number", "string", "number"]
         command "speechTest"
+        command "cannedSpeechCmds", ["string"]
+        command "calendarSpeechCmds", ["string"]
+        command "speechTestCmds", ["string"]
         command "sendTestAnnouncement"
         command "sendTestAnnouncementAll"
         command "sendAnnouncementToDevices", ["string", "string", "string", "number", "number"]
@@ -544,6 +548,7 @@ def installed() {
     logInfo("${device?.displayName} Executing Installed...")
     sendEvent(name: "mute", value: "unmuted")
     sendEvent(name: "status", value: "stopped")
+    sendEvent(name: "playbackStatus", value: "stopped")
     sendEvent(name: "deviceStatus", value: "stopped_echo_gen1")
     sendEvent(name: "trackDescription", value: "")
     sendEvent(name: "lastSpeakCmd", value: "Nothing sent yet...")
@@ -788,6 +793,7 @@ void updateDeviceStatus(Map devData) {
         if(!isOnline) {
             sendEvent(name: "mute", value: "unmuted")
             sendEvent(name: "status", value: "stopped")
+            sendEvent(name: "playbackStatus", value: "stopped")
             sendEvent(name: "deviceStatus", value: "stopped_${state?.deviceStyle?.image}")
             sendEvent(name: "trackDescription", value: "")
         } else { state?.fullRefreshOk = true; triggerDataRrsh(); }
@@ -946,15 +952,15 @@ def playbackStateHandler(playerInfo, isGroupResponse=false) {
     }
     // logTrace("getPlaybackState: ${playerInfo}")
     String playState = playerInfo?.state == 'PLAYING' ? "playing" : "stopped"
+    String playStateAlt = playerInfo?.state == 'PLAYING' ? "play" : "stop"
     String deviceStatus = "${playState}_${state?.deviceStyle?.image}"
     // log.debug "deviceStatus: ${deviceStatus}"
-    if(isStateChange(device, "status", playState?.toString()) || isStateChange(device, "deviceStatus", deviceStatus?.toString())) {
+    if(isStateChange(device, "status", playState?.toString()) || isStateChange(device, "playbackStatus", playStateAlt?.toString()) || isStateChange(device, "deviceStatus", deviceStatus?.toString())) {
         logTrace("Status Changed to ${playState}")
         isPlayStateChange = true
-        if (isGroupResponse) {
-            state?.isGroupPlaying = (playerInfo?.state == 'PLAYING')
-        }
-        sendEvent(name: "status", value: playState?.toString(), descriptionText: "Player Status is ${playState}", display: true, displayed: true)
+        if (isGroupResponse) { state?.isGroupPlaying = (playerInfo?.state == 'PLAYING') }
+        sendEvent(name: "status", value: playState?.toString(), descriptionText: "Player Status is ${playState}", display: false, displayed: false)
+        sendEvent(name: "playbackStatus", value: playStateAlt?.toString(), descriptionText: "Playback Status is ${playStateAlt}", display: true, displayed: true)
         sendEvent(name: "deviceStatus", value: deviceStatus?.toString(), display: false, displayed: false)
     }
     //Track Title
@@ -1496,6 +1502,13 @@ def stopAllDevices() {
     doSequenceCmd("StopAllDevicesCommand", "stopalldevices")
     triggerDataRrsh()
 }
+def rewind() {
+    previousTrack()
+}
+
+def fastForward() {
+    nextTrack()
+}
 
 def previousTrack() {
     logTrace("previousTrack() command received...")
@@ -2013,6 +2026,31 @@ def searchIheart(String searchPhrase, volume=null, sleepSeconds=null) {
         doSearchMusicCmd(searchPhrase, "I_HEART_RADIO", volume, sleepSeconds)
     }
 }
+
+def cannedSpeechCmds(String cmdName) {
+    try {
+        cmdName()
+    } catch (ex) {
+        //nothing to show
+    }
+}
+
+def calendarSpeechCmds(String cmdName) {
+    try {
+        cmdName()
+    } catch (ex) {
+        //nothing to show
+    }
+}
+
+def speechTestCmds(String cmdName) {
+    try {
+        cmdName()
+    } catch (ex) {
+        //nothing to show
+    }
+}
+
 
 private doSequenceCmd(cmdType, seqCmd, seqVal="") {
     if(state?.serialNumber) {

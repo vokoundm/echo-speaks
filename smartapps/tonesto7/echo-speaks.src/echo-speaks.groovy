@@ -37,6 +37,7 @@ definition(
 
 preferences {
     page(name: "startPage")
+    page(name: "liteModePage")
     page(name: "mainPage")
     page(name: "settingsPage")
     page(name: "devicePrefsPage")
@@ -69,15 +70,29 @@ preferences {
     page(name: "uninstallPage")
 }
 
+Boolean isLiteMode()  { return (isST() || (settings?.liteMode == true)) }
+
 def startPage() {
     state?.isParent = true
     checkVersionData(true)
     state?.childInstallOkFlag = false
-    if(!state?.resumeConfig && state?.isInstalled) { stateMigrationChk(); checkGuardSupport(); }
+    // TODO: check if installed first
+    if(isST() && !settings?.liteMode == true) { settingUpdate("liteMode", "true", "bool") }
+    if(!state?.resumeConfig && state?.isInstalled) { 
+        stateMigrationChk(); 
+        if(!isLiteMode()) { checkGuardSupport() }
+    }
+    
     if(state?.resumeConfig || (state?.isInstalled && !state?.serviceConfigured)) { return servPrefPage() }
     else if(showChgLogOk()) { return changeLogPage() }
     else if(showDonationOk()) { return donationPage() }
     else { return mainPage() }
+}
+
+def liteModePage() {
+    return dynamicPage(name: "liteModePage", uninstall: false, install: false) {
+        input "liteMode", "bool", title: inTS("Enable Lite Mode", getAppImg("lite_mode", true)), description: "", defaultValue: false, submitOnChange: true, image: getAppImg("lite_mode")
+    }
 }
 
 def mainPage() {
@@ -1598,7 +1613,7 @@ def storeCookieData() {
         validateCookie(true)
         state?.serviceConfigured = true
         updTsVal("lastCookieRrshDt")
-        checkGuardSupport()
+        if(!isLiteMode()) { checkGuardSupport() }
         runIn(10, "initialize", [overwrite: true])
     }
 }
@@ -2121,8 +2136,10 @@ def checkGuardSupportResponse(response, data) {
             logInfo("GuardSupport Response Length: ${respLen}")
             Map minUpdMap = getMinVerUpdsRequired()
             if(!minUpdMap?.updRequired || (minUpdMap?.updItems && !minUpdMap?.updItems?.contains("Echo Speaks Server"))) {
-                wakeupServer(false, true, "checkGuardSupport")
-                logDebug("Guard Support Check Response is too large for ST... Checking for Guard Support using the Server")
+                if(!isLiteMode()) { 
+                    wakeupServer(false, true, "checkGuardSupport")
+                    logDebug("Guard Support Check Response is too large for ST... Checking for Guard Support using the Server")
+                }
             } else {
                 logWarn("Can't check for Guard Support because server version is out of date...  Please update to the latest version...")
             }
@@ -2552,6 +2569,7 @@ def receiveEventData(Map evtData, String src) {
                     echoValue["musicProviders"] = evtData?.musicProviders
                     echoValue["permissionMap"] = permissions
                     echoValue["hasClusterMembers"] = (echoValue?.clusterMembers && echoValue?.clusterMembers?.size() > 0) ?: false
+                    echoValue["liteMode"] = (settings?.liteMode == true)
 
                     if(deviceStyleData?.name?.toString()?.toLowerCase()?.contains("unknown")) {
                         unknownDevices?.push([
@@ -2869,7 +2887,7 @@ private healthCheck() {
     validateCookie()
     if(getLastTsValSecs("lastCookieRrshDt") > cookieRefreshSeconds()) {
         runCookieRefresh()
-    } else if (getLastTsValSecs("lastGuardSupChkDt") > 43200) {
+    } else if (!isLiteMode() && (getLastTsValSecs("lastGuardSupChkDt") > 43200)) {
         checkGuardSupport()
     } else if(getLastTsValSecs("lastServerWakeDt") > 86400 && serverConfigured()) { wakeupServer(false, false, "healthCheck") }
     if(!isST() && getSocketDevice()?.isSocketActive() != true) { getSocketDevice()?.triggerInitialize() }
