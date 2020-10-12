@@ -14,12 +14,12 @@
  *
  */
 
-String appVersion()   { return "3.6.3.1" }
-String appModified()  { return "2020-09-04" }
+String appVersion()   { return "3.6.4.2" }
+String appModified()  { return "2020-10-12" }
 String appAuthor()    { return "Anthony S." }
 Boolean isBeta()      { return false }
 Boolean isST()        { return (getPlatform() == "SmartThings") }
-Map minVersions()     { return [echoDevice: 3631, wsDevice: 3311, actionApp: 3631, zoneApp: 3631, server: 250] } //These values define the minimum versions of code this app will work with.
+Map minVersions()     { return [echoDevice: 3641, wsDevice: 3311, actionApp: 3640, zoneApp: 3640, server: 250] } //These values define the minimum versions of code this app will work with.
 
 definition(
     name        : "Echo Speaks",
@@ -1109,7 +1109,8 @@ private executeTuneInSearch() {
         query: [ query: settings?.test_tuneinSearchQuery, mediaOwnerCustomerId: state?.deviceOwnerCustomerId ],
         headers: [cookie: getCookieVal(), csrf: getCsrfVal()],
         requestContentType: "application/json",
-        contentType: "application/json"
+        contentType: "application/json",
+        timeout: 20
     ]
     Map results = [:]
     try {
@@ -1677,6 +1678,11 @@ private authEvtHandler(Boolean isAuth, String src=null) {
         unschedule("noAuthReminder")
         state?.noAuthActive = false
         runIn(10, "initialize", [overwrite: true])
+    } else if (isAuth == true && state?.noAuthActive == true) {
+        logWarn("OOPS Somehow your Auth is Valid but the NoAuthActive State is true.  Clearing noAuthActive flag to allow device refresh")
+        unschedule("noAuthReminder")
+        state?.noAuthActive = false
+        // runIn(10, "initialize", [overwrite: true])
     }
 }
 
@@ -1703,7 +1709,7 @@ Integer cookieRefreshSeconds() { return (settings?.refreshCookieDays ?: 5)*86400
 
 def clearServerAuth() {
     logDebug("serverUrl: ${getServerHostURL()}")
-    Map params = [ uri: getServerHostURL(), path: "/clearAuth" ]
+    Map params = [ uri: getServerHostURL(), path: "/clearAuth", timeout: 20 ]
     def execDt = now()
     httpGet(params) { resp->
         // log.debug "resp: ${resp.status} | data: ${resp?.data}"
@@ -1719,7 +1725,8 @@ private wakeupServer(c=false, g=false, src) {
         path: "/wakeup",
         headers: [wakesrc: src],
         contentType: "text/plain",
-        requestContentType: "text/plain"
+        requestContentType: "text/plain",
+        timeout: 20
     ]
     if(!getCookieVal() || !getCsrfVal()) { logWarn("wakeupServer | Cookie or CSRF Missing... Skipping Wakeup"); return; }
     execAsyncCmd("post", "wakeupServerResp", params, [execDt: now(), refreshCookie: c, updateGuard: g, wakesrc: src])
@@ -1752,7 +1759,8 @@ private cookieRefresh() {
     Map params = [
         uri: getServerHostURL(),
         path: "/refreshCookie",
-        contentType: "application/json"
+        contentType: "application/json",
+        timeout: 20
     ]
     execAsyncCmd("get", "cookieRefreshResp", params, [execDt: now()])
 }
@@ -1790,7 +1798,8 @@ private apiHealthCheck(frc=false) {
             path: "/api/ping",
             query: ["_": ""],
             headers: [ Cookie: getCookieVal(), csrf: getCsrfVal()],
-            contentType: "plain/text"
+            contentType: "plain/text",
+            timeout: 20,
         ]
         httpGet(params) { resp->
             logDebug("API Health Check Resp: (${resp?.getData()})")
@@ -1811,7 +1820,8 @@ Boolean validateCookie(frc=false) {
             path: "/api/bootstrap",
             query: ["version": 0],
             headers: [ Cookie: getCookieVal(), csrf: getCsrfVal()],
-            contentType: "application/json"
+            contentType: "application/json",
+            timeout: 20,
         ]
         httpGet(params) { resp->
             Map aData = resp?.data?.authentication ?: null
@@ -1841,7 +1851,8 @@ private getCustomerData(frc=false) {
             path: "/api/get-customer-pfm",
             query: [_: now()],
             headers: [ Cookie: getCookieVal(), csrf: getCsrfVal()],
-            contentType: "application/json"
+            contentType: "application/json",
+            timeout: 20,
         ]
         httpGet(params) { resp->
             Map pData = resp?.data ?: null
@@ -1864,7 +1875,8 @@ private userCommIds() {
             uri: "https://alexa-comms-mobile-service.${getAmazonDomain()}",
             path: "/accounts",
             headers: [ Cookie: getCookieVal(), csrf: getCsrfVal()],
-            contentType: "application/json"
+            contentType: "application/json",
+            timeout: 20
         ]
         httpGet(params) { response->
             List resp = response?.data ?: []
@@ -1910,7 +1922,8 @@ private getMusicProviders() {
         path: "/api/behaviors/entities",
         query: [ skillId: "amzn1.ask.1p.music" ],
         headers: [ Cookie: getCookieVal(), csrf: getCsrfVal(), Connection: "keep-alive", DNT: "1", "Routines-Version": "1.1.210292" ],
-        contentType: "application/json"
+        contentType: "application/json",
+        timeout: 20
     ]
     Map items = [:]
     try {
@@ -1947,7 +1960,8 @@ private getBluetoothDevices() {
         path: "/api/bluetooth",
         query: [cached: true, _: new Date()?.getTime()],
         headers: [ Cookie: getCookieVal(), csrf: getCsrfVal()],
-        contentType: "application/json"
+        contentType: "application/json",
+        timeout: 20
     ]
     Map btResp = [:]
     try {
@@ -1986,7 +2000,8 @@ def getDeviceActivity(serialNum, frc=false) {
             path: "/api/activities",
             query: [ size: 5, offset: 1 ],
             headers: [ Cookie: getCookieVal(), csrf: getCsrfVal()],
-            contentType: "application/json"
+            contentType: "application/json",
+            timeout: 20
         ]
         Map lastActData = atomicState?.lastDevActivity ?: null
         // log.debug "activityData(IN): $lastActData"
@@ -2030,6 +2045,7 @@ private getDoNotDisturb() {
         query: [_: now()],
         headers: [ Cookie: getCookieVal(), csrf: getCsrfVal() ],
         contentType: "application/json",
+        timeout: 20
     ]
     Map dndResp = [:]
     try {
@@ -2058,7 +2074,8 @@ public getAlexaRoutines(autoId=null, utterOnly=false) {
         path: "/api/behaviors/automations${autoId ? "/${autoId}" : ""}",
         query: [ limit: 100 ],
         headers: [ Cookie: getCookieVal(), csrf: getCsrfVal() ],
-        contentType: "application/json"
+        contentType: "application/json",
+        timeout: 20
     ]
 
     def rtResp = [:]
@@ -2123,6 +2140,7 @@ def checkGuardSupport() {
         query: [ cached: true, _: new Date().getTime() ],
         headers: [ Cookie: getCookieVal(), csrf: getCsrfVal()],
         contentType: "application/json",
+        timeout: 20,
     ]
     execAsyncCmd("get", "checkGuardSupportResponse", params, [execDt: now()])
 }
@@ -2188,6 +2206,7 @@ def checkGuardSupportFromServer() {
         path: "/agsData",
         requestContentType: "application/json",
         contentType: "application/json",
+        timeout: 20,
     ]
     execAsyncCmd("get", "checkGuardSupportServerResponse", params, [execDt: now()])
 }
@@ -2228,6 +2247,7 @@ private getGuardState() {
         path: "/api/phoenix/state",
         headers: [ Cookie: getCookieVal(), csrf: getCsrfVal() ],
         contentType: "application/json",
+        timeout: 20,
         body: [ stateRequests: [ [entityId: state?.guardData?.applianceId, entityType: "APPLIANCE" ] ] ]
     ]
     try {
@@ -2260,6 +2280,7 @@ private setGuardState(guardState) {
             path: "/api/phoenix/state",
             headers: [cookie: getCookieVal(), csrf: getCsrfVal()],
             contentType: "application/json",
+            timeout: 20,
             body: body?.toString()
         ]
         httpPutJson(params) { response ->
@@ -2291,6 +2312,7 @@ private getAlexaSkills() {
             csrf: getCsrfVal()
         ],
         contentType: "application/json",
+        timeout: 20,
     ]
     try {
         httpGet(params) { response->
@@ -2404,7 +2426,8 @@ private getEchoDevices() {
         path: "/api/devices-v2/device",
         query: [ cached: true, _: new Date().getTime() ],
         headers: [ Cookie: getCookieVal(), csrf: getCsrfVal() ],
-        contentType: "application/json"
+        contentType: "application/json",
+        timeout: 20,
     ]
     state?.deviceRefreshInProgress = true
     state?.refreshDeviceData = false
@@ -2850,6 +2873,7 @@ private sendSequenceCommand(type, command, value) {
         path: "/api/behaviors/preview",
         headers: [ Cookie: getCookieVal(), csrf: getCsrfVal() ],
         contentType: "application/json",
+        timeout: 20,
         body: new groovy.json.JsonOutput().toJson(seqObj)
     ], [cmdDesc: "SequenceCommand (${type})"])
 }
@@ -3164,7 +3188,7 @@ def queueFirebaseData(url, path, data, cmdType=null, type=null) {
     logTrace("queueFirebaseData(${path}, ${data}, $cmdType, $type")
     Boolean result = false
     def json = new groovy.json.JsonOutput().prettyPrint(data)
-    Map params = [uri: url as String, path: path as String, requestContentType: "application/json", contentType: "application/json", body: json.toString()]
+    Map params = [uri: url as String, path: path as String, requestContentType: "application/json", contentType: "application/json", timeout: 20, body: json.toString()]
     String typeDesc = type ? type as String : "Data"
     try {
         if(!cmdType || cmdType == "put") {
@@ -3326,7 +3350,8 @@ private checkVersionData(now = false) { //This reads a JSON file from GitHub wit
 private getConfigData() {
     Map params = [
         uri: "https://raw.githubusercontent.com/tonesto7/echo-speaks/${isBeta() ? "beta" : "master"}/resources/appData.json",
-        contentType: "application/json"
+        contentType: "application/json",
+        timeout: 20,
     ]
     def data = getWebData(params, "appData", false)
     if(data) {
@@ -3339,7 +3364,8 @@ private getConfigData() {
 private getNoticeData() {
     Map params = [
         uri: "https://raw.githubusercontent.com/tonesto7/echo-speaks/master/notices.json",
-        contentType: "application/json"
+        contentType: "application/json",
+        timeout: 20,
     ]
     def data = getWebData(params, "noticeData", false)
     if(data) {
@@ -4080,9 +4106,9 @@ def appInfoSect()	{
     String str = ""
     Boolean isNote = false
     if(codeVer && (codeVer?.server || codeVer?.actionApp || codeVer?.echoDevice)) {
+        str += (codeVer && codeVer?.echoDevice) ? bulletItem(str, "Device: (v${codeVer?.echoDevice})") : ""
         str += (codeVer && codeVer?.actionApp) ? bulletItem(str, "Action: (v${codeVer?.actionApp})") : ""
         str += (codeVer && codeVer?.zoneApp) ? bulletItem(str, "Zone: (v${codeVer?.zoneApp})") : ""
-        str += (codeVer && codeVer?.echoDevice) ? bulletItem(str, "Device: (v${codeVer?.echoDevice})") : ""
         str += (!isST() && codeVer && codeVer?.wsDevice) ? bulletItem(str, "Socket: (v${codeVer?.wsDevice})") : ""
         str += (codeVer && codeVer?.server) ? bulletItem(str, "Server: (v${codeVer?.server})") : ""
     }
@@ -5065,6 +5091,7 @@ private Map deviceSupportMap() {
             "A2E0SNTXJVT7WK": [ caps: [ "a", "t" ], image: "firetv_gen1", name: "Fire TV (Gen2)" ],
             "A2GFL5ZMWNE0PX": [ caps: [ "a", "t" ], image: "firetv_gen1", name: "Fire TV (Gen3)" ],
             "A2HZENIFNYTXZD": [ caps: [ "a", "t" ], image: "facebook_portal", name: "Facebook Portal" ],
+            "A52ARKF0HM2T4": [ caps: [ "a", "t" ], image: "facebook_portal", name: "Facebook Portal+" ],
             "A2IVLV5VM2W81": [  ignore: true ],
             "A2J0R2SD7G9LPA": [ caps: [ "a", "t" ], image: "lenovo_smarttab_m10", name: "Lenovo SmartTab M10" ],
             "A2JKHJ0PX4J3L3": [ caps: [ "a", "t" ], image: "firetv_cube", name: "Fire TV Cube (Gen2)" ],
@@ -5112,6 +5139,7 @@ private Map deviceSupportMap() {
             "A3BRT6REMPQWA8": [ caps: [ "a", "t" ], image: "sonos_generic", name: "Bose Home Speaker 450" ],
             "A3C9PE6TNYLTCH": [ image: "echo_wha", name: "Multiroom" ],
             "A3F1S88NTZZXS9": [ blocked: true, image: "dash_wand", name: "Dash Wand" ],
+            "A2WFDCBDEXOXR8": [ blocked: true, image: "unknown", name: "Bose Soundbar 700" ],
             "A3FX4UWTP28V1P": [ caps: [ "a", "t" ], image: "echo_plus_gen2", name: "Echo (Gen3)" ],
             "A3H674413M2EKB": [ ignore: true ],
             "A3KULB3NQN7Z1F": [ caps: [ "a", "t" ], image: "unknown", name: "Unknown TV" ],
@@ -5119,17 +5147,22 @@ private Map deviceSupportMap() {
             "AGHZIK8D6X7QR": [ caps: [ "a", "t" ], image: "unknown", name: "Fire TV" ],
             "A3HF4YRA2L7XGC": [ caps: [ "a", "t" ], image: "firetv_cube", name: "Fire TV Cube" ],
             "A3L0T0VL9A921N": [ caps: [ "a", "t" ], image: "tablet_hd10", name: "Fire Tablet HD 8" ],
+            "AVU7CPPF2ZRAS": [ caps: [ "a", "t" ], image: "tablet_hd10", name: "Fire Tablet HD 8" ],
             "A3NPD82ABCPIDP": [ caps: [ "t" ], image: "sonos_beam", name: "Sonos Beam" ],
             "A3NVKTZUPX1J3X": [ ignore: true, name: "Onkyp VC30" ],
             "A3NWHXTQ4EBCZS": [ ignore: true ],
             "A2RG3FY1YV97SS": [ ignore: true ],
+            "A3IYPH06PH1HRA": [ caps: [ "a", "t" ], image: "echo_frames", name: "Echo Frames" ],
+            "AKO51L5QAQKL2": [ caps: [ "a", "t" ], image: "unknown", name: "Alexa Jams" ],
             "A3K69RS3EIMXPI": [ caps: [ "a", "t" ], image: "unknown", name: "Hisense Smart TV" ],
+            "A1QKZ9D0IJY332": [ caps: [ "a", "t" ], image: "unknown", name: "Samsung TV 2020-U" ],
             "A3QPPX1R9W5RJV": [ caps: [ "a", "t" ], image: "fabriq_chorus", name: "Fabriq Chorus" ],
             "A3R9S4ZZECZ6YL": [ caps: [ "a", "t" ], image: "tablet_hd10", name: "Fire Tablet HD 10" ],
             "A3RBAYBE7VM004": [ caps: [ "a", "t" ], image: "echo_studio", name: "Echo Studio" ],
             "A2RU4B77X9R9NZ": [ caps: [ "a", "t" ], image: "echo_link_amp", name: "Echo Link Amp" ],
             "A3S5BH2HU6VAYF": [ caps: [ "a", "t" ], image: "echo_dot_gen2", name: "Echo Dot (Gen2)" ],
             "A3SSG6GR8UU7SN": [ caps: [ "a", "t" ], image: "echo_sub_gen1", name: "Echo Sub" ],
+            "A3BW5ZVFHRCQPO": [ caps: [ "a", "t" ], image: "unknown", name: "BMW Alexa Integration" ],
             "A3SSWQ04XYPXBH": [ blocked: true, image: "amazon_tablet", name: "Generic Tablet" ],
             "A3TCJ8RTT3NVI7": [ ignore: true ],
             "A3VRME03NAXFUB": [ caps: [ "a", "t" ], image: "echo_flex", name: "Echo Flex" ],
@@ -5137,6 +5170,8 @@ private Map deviceSupportMap() {
             "A7WXQPH584YP":  [ caps: [ "a", "t" ], image: "echo_gen2", name: "Echo (Gen2)" ],
             "A81PNL0A63P93": [ caps: [ "a", "t" ], image: "unknown", name: "Home Remote" ],
             "AB72C64C86AW2": [ caps: [ "a", "t" ], image: "echo_gen1", name: "Echo (Gen1)" ],
+            "A1SCI5MODUBAT1": [ caps: [ "a", "t"], image: "unknown", name: "Pioneer DMH-W466NEX" ],
+            "A1ETW4IXK2PYBP": [ caps: [ "a", "t"], image: "unknown", name: "Talk to Alexa" ],
             "ABP0V5EHO8A4U": [ ignore: true ],
             "AD2YUJTRVBNOF": [ ignore: true ],
             "ADQRVG6LYK4LQ": [ ignore: true ],
@@ -5152,6 +5187,7 @@ private Map deviceSupportMap() {
             "AO6HHP9UE6EOF": [ caps: [ "a", "t" ], image: "unknown", name: "Unknown Media Device" ],
             "AP1F6KUH00XPV": [ blocked: true, name: "Stereo/Subwoofer Pair" ],
             "AP4RS91ZQ0OOI": [ caps: [ "a", "t" ], image: "toshiba_firetv", name: "Fire TV (Toshiba)" ],
+            "AFF5OAL5E3DIU": [ caps: [ "a", "t" ], image: "toshiba_firetv", name: "Fire TV" ],
             "ATH4K2BAIXVHQ": [ ignore: true ],
             "AUPUQSVCVHXP0": [ ignore: true ],
             "AVD3HM0HOJAAL": [ image: "sonos_generic", name: "Sonos" ],
